@@ -1,6 +1,7 @@
 #FROM ollama/ollama:latest
 #Newer versions have compability issues with NVIDIA L4 on Google Cloud Run
-FROM ollama/ollama:0.23.4
+# --platform=linux/amd64: obrazy budowane na Macu M1/M2/M3 (ARM) inaczej nie wstaną na Cloud Run (x86-64)
+FROM --platform=linux/amd64 ollama/ollama:0.23.4
 
 # Listen on all interfaces, port 8080
 ENV OLLAMA_HOST=0.0.0.0:8080

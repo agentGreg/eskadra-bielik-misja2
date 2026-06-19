@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Architektura RAG — Eskadra Bielika Misja 2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Geist:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap" />
+<style>
+  :root{
+    --bg-primary:#F5F1EB; --bg-secondary:#EFEAE0; --ink:#1A1814;
+    --bielik-teal:#1B5E6B; --cyber-blue:#3A7CA5; --stone:#8B8378; --hairline:#E0DAD0;
+    --shadow-card:0 1px 3px rgba(26,24,20,0.06);
+  }
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  body{ font-family:'Geist','Inter',system-ui,sans-serif; background:var(--bg-primary); color:var(--ink);
+    line-height:1.55; padding:28px; }
+  .eyebrow{ font-family:'JetBrains Mono',monospace; font-size:11px; text-transform:uppercase;
+    letter-spacing:0.12em; color:var(--bielik-teal); margin-bottom:6px; }
+  h1{ font-family:'Fraunces',serif; font-weight:600; font-size:28px; letter-spacing:-0.01em; margin-bottom:18px; }
+
+  .flow-tabs{ display:flex; gap:8px; margin-bottom:18px; flex-wrap:wrap; }
+  .flow-tab{ font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:0.04em;
+    padding:8px 14px; border:1px solid var(--hairline); background:var(--bg-secondary); color:var(--stone);
+    border-radius:4px; cursor:pointer; transition:all .15s; }
+  .flow-tab:hover{ color:var(--ink); }
+  .flow-tab.active{ background:var(--bielik-teal); color:#fff; border-color:var(--bielik-teal); }
+
+  .stage{ display:grid; grid-template-columns:1.6fr 1fr; gap:24px; align-items:start; }
+  .diagram{ background:var(--bg-secondary); border:1px solid var(--hairline); border-radius:8px;
+    box-shadow:var(--shadow-card); padding:8px; }
+  svg{ width:100%; height:auto; display:block; }
+
+  .node rect{ fill:#fff; stroke:var(--hairline); stroke-width:1; transition:stroke .2s, fill .2s; }
+  .node.active rect{ stroke:var(--bielik-teal); stroke-width:2; fill:#fff; }
+  .node .title{ font-family:'Geist',sans-serif; font-weight:500; font-size:13px; fill:var(--ink); }
+  .node .sub{ font-family:'JetBrains Mono',monospace; font-size:9.5px; fill:var(--stone); }
+  .edge{ stroke:var(--hairline); stroke-width:1.5; fill:none; transition:stroke .2s, stroke-width .2s; }
+  .edge.active{ stroke:var(--bielik-teal); stroke-width:2.5; stroke-dasharray:6 4; animation:dash 1s linear infinite; }
+  @keyframes dash{ to{ stroke-dashoffset:-20; } }
+  .edge-num{ font-family:'JetBrains Mono',monospace; font-size:10px; fill:var(--stone); }
+  .edge-num.active{ fill:var(--bielik-teal); font-weight:500; }
+
+  .panel{ background:var(--bg-secondary); border:1px solid var(--hairline); border-radius:8px; padding:20px; }
+  .panel .step-label{ font-family:'JetBrains Mono',monospace; font-size:11px; text-transform:uppercase;
+    letter-spacing:0.1em; color:var(--bielik-teal); margin-bottom:8px; }
+  .panel h3{ font-family:'Fraunces',serif; font-weight:500; font-size:19px; margin-bottom:10px; }
+  .panel p{ font-size:14.5px; color:var(--ink); margin-bottom:14px; }
+  .payload{ font-family:'JetBrains Mono',monospace; font-size:11.5px; background:#fff; border:1px solid var(--hairline);
+    border-radius:6px; padding:12px; white-space:pre-wrap; color:var(--ink); overflow-x:auto; }
+  .nav{ display:flex; gap:8px; margin-top:16px; }
+  .nav button{ font-family:'JetBrains Mono',monospace; font-size:12px; padding:8px 14px; cursor:pointer;
+    border:1px solid var(--hairline); background:#fff; color:var(--ink); border-radius:4px; transition:all .15s; }
+  .nav button:hover{ border-color:var(--bielik-teal); color:var(--bielik-teal); }
+  .nav .dots{ display:flex; align-items:center; gap:6px; margin-left:auto; }
+  .dot{ width:8px; height:8px; border-radius:50%; background:var(--hairline); }
+  .dot.active{ background:var(--bielik-teal); }
+
+  @media (max-width:820px){ .stage{ grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+  <div class="eyebrow">Eskadra Bielika · Misja 2</div>
+  <h1>Architektura systemu RAG</h1>
+
+  <div class="flow-tabs">
+    <button class="flow-tab active" data-flow="rag">Zapytanie RAG · /ask</button>
+    <button class="flow-tab" data-flow="direct">Baseline · /ask_direct</button>
+    <button class="flow-tab" data-flow="ingest">Zasilanie bazy · /ingest_text</button>
+  </div>
+
+  <div class="stage">
+    <div class="diagram">
+      <svg viewBox="0 0 760 460" role="img" aria-label="Diagram architektury">
+        <defs>
+          <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--stone)"/>
+          </marker>
+          <marker id="arrowA" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--bielik-teal)"/>
+          </marker>
+        </defs>
+
+        <!-- edges (drawn first, under nodes) -->
+        <g id="edges"></g>
+
+        <!-- nodes -->
+        <g class="node" data-node="user"><rect x="30" y="200" width="120" height="56" rx="8"/>
+          <text class="title" x="90" y="226" text-anchor="middle">Użytkownik</text>
+          <text class="sub" x="90" y="242" text-anchor="middle">przeglądarka</text></g>
+        <g class="node" data-node="ui"><rect x="200" y="200" width="120" height="56" rx="8"/>
+          <text class="title" x="260" y="226" text-anchor="middle">Web UI</text>
+          <text class="sub" x="260" y="242" text-anchor="middle">index.html</text></g>
+        <g class="node" data-node="api"><rect x="370" y="200" width="120" height="56" rx="8"/>
+          <text class="title" x="430" y="226" text-anchor="middle">FastAPI</text>
+          <text class="sub" x="430" y="242" text-anchor="middle">orchestration</text></g>
+        <g class="node" data-node="emb"><rect x="600" y="60" width="130" height="56" rx="8"/>
+          <text class="title" x="665" y="86" text-anchor="middle">EmbeddingGemma</text>
+          <text class="sub" x="665" y="102" text-anchor="middle">Cloud Run · 768D</text></g>
+        <g class="node" data-node="bq"><rect x="600" y="200" width="130" height="56" rx="8"/>
+          <text class="title" x="665" y="226" text-anchor="middle">BigQuery</text>
+          <text class="sub" x="665" y="242" text-anchor="middle">Vector Search</text></g>
+        <g class="node" data-node="llm"><rect x="600" y="340" width="130" height="56" rx="8"/>
+          <text class="title" x="665" y="366" text-anchor="middle">Bielik LLM</text>
+          <text class="sub" x="665" y="382" text-anchor="middle">Cloud Run · GPU</text></g>
+      </svg>
+    </div>
+
+    <div class="panel">
+      <div class="step-label" id="stepLabel">Krok 1 / 6</div>
+      <h3 id="stepTitle">—</h3>
+      <p id="stepDesc">—</p>
+      <div class="payload" id="stepPayload">—</div>
+      <div class="nav">
+        <button id="prevBtn">← Poprzedni</button>
+        <button id="nextBtn">Następny →</button>
+        <div class="dots" id="dots"></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  // Pozycje środków węzłów (zgodne z SVG)
+  const NODE = {
+    user:{x:90,y:228}, ui:{x:260,y:228}, api:{x:430,y:228},
+    emb:{x:665,y:88}, bq:{x:665,y:228}, llm:{x:665,y:368}
+  };
+  const W=120, H=56; // rozmiar węzłów lewej kolumny (api/ui/user); prawe mają W=130
+
+  // Definicje przepływów: każdy krok = {from,to,title,desc,payload}
+  const FLOWS = {
+    rag:[
+      {from:'user',to:'ui',title:'Pytanie użytkownika',desc:'Użytkownik wpisuje pytanie w interfejsie i wybiera liczbę dokumentów kontekstowych (suwak 1–5).',payload:'„O której godzinie jest śniadanie?”'},
+      {from:'ui',to:'api',title:'POST /ask',desc:'Web UI wysyła zapytanie do API orkiestrującego wraz z parametrem limit.',payload:'POST /ask\n{ "query": "...", "limit": 3 }'},
+      {from:'api',to:'emb',title:'Tekst → wektor',desc:'API prosi EmbeddingGemma o zamianę pytania na wektor (768 wymiarów).',payload:'POST /api/embed\n{ "model":"embeddinggemma", "input":"..." }\n→ [0.013, -0.21, ... ] (768)'},
+      {from:'api',to:'bq',title:'Wyszukiwanie wektorowe',desc:'API odpytuje BigQuery Vector Search o najbliższe dokumenty (COSINE, top_k = limit).',payload:'VECTOR_SEARCH(TABLE rag_dataset.hotel_rules,\n  "embedding", (SELECT [...] ), top_k => 3,\n  distance_type => "COSINE")'},
+      {from:'api',to:'llm',title:'Prompt + kontekst',desc:'API buduje prompt z odnalezionym kontekstem i wysyła go do modelu Bielik.',payload:'KONTEKST:\n- Śniadanie 7:00–10:30\n...\nPYTANIE: O której godzinie jest śniadanie?'},
+      {from:'api',to:'ui',title:'Odpowiedź + trafność',desc:'API zwraca odpowiedź modelu, użyty kontekst oraz score trafności (0–100%) każdego fragmentu.',payload:'{ "answer":"Śniadanie 7:00–10:30",\n  "context_used":[...], "context_scores":[0.91, 0.74] }'}
+    ],
+    direct:[
+      {from:'user',to:'ui',title:'Pytanie użytkownika',desc:'To samo pytanie, ale ścieżką baseline — bez bazy wiedzy.',payload:'„O której godzinie jest śniadanie?”'},
+      {from:'ui',to:'api',title:'POST /ask_direct',desc:'Web UI wysyła pytanie wprost, z pominięciem RAG.',payload:'POST /ask_direct\n{ "query": "..." }'},
+      {from:'api',to:'llm',title:'Pytanie wprost do modelu',desc:'API przekazuje pytanie do Bielika bez żadnego kontekstu — model odpowiada „z głowy”.',payload:'PYTANIE: O której godzinie jest śniadanie?'},
+      {from:'api',to:'ui',title:'Odpowiedź modelu',desc:'Odpowiedź bywa ogólnikowa lub zmyślona — to ilustruje wartość RAG.',payload:'{ "answer":"Zwykle śniadania serwuje się 7:00–10:00..." }'}
+    ],
+    ingest:[
+      {from:'ui',to:'api',title:'POST /ingest_text',desc:'Użytkownik dodaje nową regułę z poziomu UI — na żywo, bez pliku CSV.',payload:'POST /ingest_text\n{ "text":"Doba hotelowa: 15:00–11:00." }'},
+      {from:'api',to:'emb',title:'Tekst → wektor',desc:'API zamienia treść reguły na wektor przy pomocy EmbeddingGemma.',payload:'POST /api/embed → [ ... ] (768)'},
+      {from:'api',to:'bq',title:'Zapis do BigQuery',desc:'Reguła trafia do tabeli wraz z wektorem i staje się przeszukiwalna w RAG.',payload:'INSERT { id: uuid, content:"...", embedding:[...] }\n→ rag_dataset.hotel_rules'}
+    ]
+  };
+
+  function nodeWidth(n){ return (n==='emb'||n==='bq'||n==='llm') ? 130 : 120; }
+  // Punkt na krawędzi prostokąta w kierunku celu (prosto: użyj środków, przytnij do brzegu poziomo/pionowo)
+  function edgePath(from,to){
+    const a=NODE[from], b=NODE[to];
+    return `M ${a.x} ${a.y} L ${b.x} ${b.y}`;
+  }
+
+  const edgesG = document.getElementById('edges');
+  const nodes = {}; document.querySelectorAll('.node').forEach(g=>nodes[g.dataset.node]=g);
+
+  let flow='rag', step=0;
+
+  function render(){
+    const steps = FLOWS[flow];
+    // edges
+    edgesG.innerHTML='';
+    steps.forEach((s,i)=>{
+      const p=document.createElementNS('http://www.w3.org/2000/svg','path');
+      p.setAttribute('d', edgePath(s.from,s.to));
+      p.setAttribute('class','edge'+(i===step?' active':''));
+      p.setAttribute('marker-end', i===step?'url(#arrowA)':'url(#arrow)');
+      edgesG.appendChild(p);
+      // numer kroku przy środku krawędzi
+      const a=NODE[s.from], b=NODE[s.to];
+      const t=document.createElementNS('http://www.w3.org/2000/svg','text');
+      t.setAttribute('x',(a.x+b.x)/2); t.setAttribute('y',(a.y+b.y)/2 - 6);
+      t.setAttribute('text-anchor','middle');
+      t.setAttribute('class','edge-num'+(i===step?' active':''));
+      t.textContent=(i+1);
+      edgesG.appendChild(t);
+    });
+    // active nodes
+    Object.values(nodes).forEach(n=>n.classList.remove('active'));
+    const cur=steps[step];
+    nodes[cur.from]?.classList.add('active'); nodes[cur.to]?.classList.add('active');
+    // panel
+    document.getElementById('stepLabel').textContent=`Krok ${step+1} / ${steps.length}`;
+    document.getElementById('stepTitle').textContent=cur.title;
+    document.getElementById('stepDesc').textContent=cur.desc;
+    document.getElementById('stepPayload').textContent=cur.payload;
+    // dots
+    const dots=document.getElementById('dots'); dots.innerHTML='';
+    steps.forEach((_,i)=>{ const d=document.createElement('div'); d.className='dot'+(i===step?' active':''); dots.appendChild(d); });
+  }
+
+  document.querySelectorAll('.flow-tab').forEach(b=>b.addEventListener('click',()=>{
+    document.querySelectorAll('.flow-tab').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active'); flow=b.dataset.flow; step=0; render();
+  }));
+  document.getElementById('prevBtn').addEventListener('click',()=>{ step=Math.max(0,step-1); render(); });
+  document.getElementById('nextBtn').addEventListener('click',()=>{ step=Math.min(FLOWS[flow].length-1,step+1); render(); });
+  document.addEventListener('keydown',e=>{ if(e.key==='ArrowLeft'){step=Math.max(0,step-1);render();} if(e.key==='ArrowRight'){step=Math.min(FLOWS[flow].length-1,step+1);render();} });
+
+  render();
+</script>
+</body>
+</html>

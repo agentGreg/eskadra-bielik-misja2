@@ -1,301 +1,296 @@
 <!DOCTYPE html>
 <html lang="pl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Eskadra Bielik - Porównanie RAG</title>
-    <style>
-        :root {
-            --bg-color: #f5f5f7;
-            --container-bg: rgba(255, 255, 255, 0.85);
-            --text-color: #1d1d1f;
-            --accent-color: #0071e3;
-            --accent-hover: #0077ED;
-            --border-color: #d2d2d7;
-            --shadow: 0 4px 24px rgba(0,0,0,0.06);
-            --font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-        }
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Eskadra Bielika · Misja 2 — Bielik + RAG</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='9' fill='%231B5E6B'/></svg>" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=Geist:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" />
+<style>
+  :root{
+    --bg-primary:#F5F1EB; --bg-secondary:#EFEAE0; --ink:#1A1814;
+    --bielik-teal:#1B5E6B; --cyber-blue:#3A7CA5; --prosit-green:#0D3D2E;
+    --stone:#8B8378; --hairline:#E0DAD0;
+    --score-high:#1B5E6B; --score-mid:#B8860B; --score-low:#A14238;
+    --shadow-card:0 1px 3px rgba(26,24,20,0.06);
+    --r-card:8px; --r-btn:4px;
+  }
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  body{
+    font-family:'Geist','Inter',system-ui,-apple-system,sans-serif;
+    background:var(--bg-primary); color:var(--ink); line-height:1.6; font-size:16px;
+    -webkit-font-smoothing:antialiased;
+    background-image:
+      radial-gradient(rgba(26,24,20,0.018) 1px,transparent 1px),
+      radial-gradient(rgba(26,24,20,0.012) 1px,transparent 1px);
+    background-size:3px 3px,7px 7px; background-position:0 0,1px 2px;
+    padding:48px 24px;
+  }
+  ::selection{ background:var(--bielik-teal); color:var(--bg-primary); }
+  .wrap{ max-width:1080px; margin:0 auto; }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+  .eyebrow{
+    font-family:'JetBrains Mono',monospace; font-size:12px; text-transform:uppercase;
+    letter-spacing:0.12em; color:var(--bielik-teal); margin-bottom:12px;
+    display:flex; align-items:center; gap:8px;
+  }
+  .eyebrow .node{ width:9px; height:9px; border-radius:50%; background:var(--bielik-teal); display:inline-block; }
+  h1{ font-family:'Fraunces',serif; font-weight:600; font-size:48px; letter-spacing:-0.02em; line-height:1.05; }
+  .subtitle{ color:var(--stone); max-width:60ch; margin-top:12px; font-size:17px; }
 
-        body {
-            font-family: var(--font-family);
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            line-height: 1.5;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            padding: 40px 20px;
-            align-items: center;
-        }
+  /* Tabs */
+  .tabs{ display:flex; gap:4px; border-bottom:1px solid var(--hairline); margin:32px 0 24px; }
+  .tab{
+    font-family:'JetBrains Mono',monospace; font-size:13px; letter-spacing:0.06em; text-transform:uppercase;
+    padding:12px 18px; cursor:pointer; color:var(--stone); background:none; border:none;
+    border-bottom:2px solid transparent; margin-bottom:-1px; transition:color .15s,border-color .15s;
+  }
+  .tab:hover{ color:var(--ink); }
+  .tab.active{ color:var(--bielik-teal); border-bottom-color:var(--bielik-teal); }
 
-        .header {
-            text-align: center;
-            margin-bottom: 40px;
-            max-width: 800px;
-        }
+  /* Controls */
+  .ask-row{ display:flex; gap:12px; flex-wrap:wrap; }
+  input[type="text"]{
+    flex:1; min-width:240px; padding:14px 18px; font-size:16px; font-family:inherit;
+    background:#fff; color:var(--ink); border:1px solid var(--hairline); border-radius:var(--r-card); outline:none;
+    transition:border-color .15s,box-shadow .15s;
+  }
+  input[type="text"]:focus{ border-color:var(--bielik-teal); box-shadow:0 0 0 3px rgba(27,94,107,0.12); }
+  button.primary{
+    padding:0 28px; font-size:15px; font-weight:500; font-family:inherit; color:#fff;
+    background:var(--bielik-teal); border:none; border-radius:var(--r-btn); cursor:pointer;
+    transition:background .15s; white-space:nowrap;
+  }
+  button.primary:hover{ background:var(--cyber-blue); }
+  button.primary:disabled{ background:var(--stone); cursor:not-allowed; opacity:.6; }
 
-        .header h1 {
-            font-size: 40px;
-            font-weight: 600;
-            letter-spacing: -0.01em;
-            margin-bottom: 12px;
-        }
+  .meta-row{ display:flex; align-items:center; gap:24px; flex-wrap:wrap; margin-top:16px;
+    font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--stone); }
+  .slider-group{ display:flex; align-items:center; gap:10px; }
+  .slider-group label{ text-transform:uppercase; letter-spacing:0.08em; }
+  input[type="range"]{ accent-color:var(--bielik-teal); width:120px; }
+  .limit-val{ color:var(--bielik-teal); font-weight:500; }
+  .count-badge{ color:var(--ink); }
+  .count-badge b{ color:var(--bielik-teal); }
 
-        .header p {
-            font-size: 19px;
-            color: #86868b;
-            font-weight: 400;
-        }
+  /* Panels */
+  .compare{ display:grid; grid-template-columns:1fr 1fr; gap:24px; margin-top:28px; }
+  .panel{
+    background:var(--bg-secondary); border:1px solid var(--hairline); border-radius:var(--r-card);
+    padding:28px; box-shadow:var(--shadow-card); display:flex; flex-direction:column;
+  }
+  .panel h2{ font-family:'Fraunces',serif; font-weight:500; font-size:22px; }
+  .panel .tag{ font-family:'JetBrains Mono',monospace; font-size:11px; text-transform:uppercase;
+    letter-spacing:0.1em; color:var(--stone); margin:4px 0 16px; padding-bottom:16px; border-bottom:1px solid var(--hairline); }
+  .panel.rag .tag{ color:var(--bielik-teal); }
+  .content{ font-size:15.5px; white-space:pre-wrap; min-height:60px; }
+  .content i{ color:var(--stone); }
 
-        .input-section {
-            width: 100%;
-            max-width: 900px;
-            margin-bottom: 40px;
-            display: flex;
-            gap: 16px;
-        }
+  .skeleton{ background:linear-gradient(90deg,var(--hairline) 25%,var(--bg-primary) 50%,var(--hairline) 75%);
+    background-size:200% 100%; animation:loading 1.4s infinite; border-radius:4px; height:16px; margin-bottom:10px; }
+  .skeleton.s1{ width:100%; } .skeleton.s2{ width:92%; } .skeleton.s3{ width:70%; }
+  @keyframes loading{ 0%{background-position:200% 0;} 100%{background-position:-200% 0;} }
 
-        input[type="text"] {
-            flex-grow: 1;
-            padding: 18px 24px;
-            font-size: 17px;
-            border: 1px solid var(--border-color);
-            border-radius: 20px;
-            background: var(--container-bg);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            outline: none;
-            transition: all 0.2s ease;
-            box-shadow: 0 2px 12px rgba(0,0,0,0.03);
-            font-family: inherit;
-        }
+  .context-box{ margin-top:22px; border-top:1px solid var(--hairline); padding-top:16px; }
+  .context-box h4{ font-family:'JetBrains Mono',monospace; font-size:11px; text-transform:uppercase;
+    letter-spacing:0.1em; color:var(--stone); margin-bottom:12px; }
+  .context-item{ display:flex; gap:12px; align-items:flex-start; margin-bottom:12px;
+    padding-left:12px; border-left:2px solid var(--bielik-teal); font-size:14px; }
+  .context-item .txt{ flex:1; }
+  .score{ font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:500; padding:2px 8px;
+    border-radius:999px; white-space:nowrap; color:#fff; }
+  .score.high{ background:var(--score-high); }
+  .score.mid{ background:var(--score-mid); }
+  .score.low{ background:var(--score-low); }
+  .err{ color:var(--score-low); }
 
-        input[type="text"]:focus {
-            border-color: var(--accent-color);
-            box-shadow: 0 0 0 4px rgba(0, 113, 227, 0.2);
-        }
+  /* Ingest */
+  .ingest{ margin-top:32px; background:var(--bg-secondary); border:1px solid var(--hairline);
+    border-radius:var(--r-card); padding:24px; }
+  .ingest h3{ font-family:'Fraunces',serif; font-weight:500; font-size:18px; margin-bottom:6px; }
+  .ingest p.hint{ font-size:13px; color:var(--stone); margin-bottom:14px; }
+  .ingest-row{ display:flex; gap:12px; flex-wrap:wrap; }
+  .ingest-row textarea{ flex:1; min-width:240px; min-height:52px; padding:12px 16px; font-size:15px;
+    font-family:inherit; resize:vertical; background:#fff; border:1px solid var(--hairline); border-radius:var(--r-card); outline:none; }
+  .ingest-row textarea:focus{ border-color:var(--bielik-teal); box-shadow:0 0 0 3px rgba(27,94,107,0.12); }
+  .ingest-result{ margin-top:12px; font-family:'JetBrains Mono',monospace; font-size:12px; }
+  .ingest-result.ok{ color:var(--bielik-teal); }
+  .ingest-result.bad{ color:var(--score-low); }
 
-        button {
-            padding: 0 32px;
-            font-size: 17px;
-            font-weight: 500;
-            color: white;
-            background-color: var(--accent-color);
-            border: none;
-            border-radius: 20px;
-            cursor: pointer;
-            transition: background-color 0.2s ease;
-            white-space: nowrap;
-            font-family: inherit;
-        }
+  /* Architecture iframe */
+  #tab-arch{ display:none; }
+  #tab-arch iframe{ width:100%; height:78vh; border:1px solid var(--hairline); border-radius:var(--r-card); background:#fff; }
 
-        button:hover {
-            background-color: var(--accent-hover);
-        }
+  footer{ margin-top:48px; padding-top:16px; border-top:1px solid var(--hairline);
+    font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.06em; color:var(--stone);
+    display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px; }
+  footer .prosit{ color:var(--prosit-green); }
+  a{ color:var(--bielik-teal); text-decoration:none; } a:hover{ color:var(--cyber-blue); }
 
-        button:disabled {
-            background-color: #a1c6ff;
-            cursor: not-allowed;
-        }
-
-        .comparision-container {
-            display: flex;
-            width: 100%;
-            max-width: 1200px;
-            gap: 24px;
-            margin-top: 20px;
-            flex-wrap: wrap;
-        }
-
-        .panel {
-            flex: 1;
-            min-width: 300px;
-            background: var(--container-bg);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border-radius: 24px;
-            padding: 32px;
-            box-shadow: var(--shadow);
-            border: 1px solid rgba(255,255,255,0.5);
-            display: flex;
-            flex-direction: column;
-        }
-
-        .panel h2 {
-            font-size: 24px;
-            font-weight: 600;
-            margin-bottom: 8px;
-            color: #1d1d1f;
-        }
-
-        .panel p.desc {
-            font-size: 14px;
-            color: #86868b;
-            margin-bottom: 24px;
-            border-bottom: 1px solid var(--border-color);
-            padding-bottom: 16px;
-        }
-
-        .content {
-            flex-grow: 1;
-            font-size: 16px;
-            line-height: 1.6;
-            color: #1d1d1f;
-            white-space: pre-wrap;
-        }
-
-        .skeleton {
-            background: linear-gradient(90deg, #e2e2e2 25%, #f0f0f0 50%, #e2e2e2 75%);
-            background-size: 200% 100%;
-            animation: loading 1.5s infinite;
-            border-radius: 8px;
-            height: 20px;
-            margin-bottom: 10px;
-        }
-
-        .skeleton.title { width: 40%; height: 24px; margin-bottom: 16px; }
-        .skeleton.p1 { width: 100%; }
-        .skeleton.p2 { width: 100%; }
-        .skeleton.p3 { width: 80%; }
-
-        @keyframes loading {
-            0% { background-position: 200% 0; }
-            100% { background-position: -200% 0; }
-        }
-        
-        .context-box {
-            margin-top: 24px;
-            background: #f5f5f7;
-            border-radius: 12px;
-            padding: 16px;
-            font-size: 13px;
-            color: #515154;
-        }
-        
-        .context-box h4 {
-            margin-bottom: 8px;
-            color: #1d1d1f;
-            font-weight: 600;
-            font-size: 14px;
-        }
-        
-        .context-item {
-            margin-bottom: 8px;
-            padding-left: 12px;
-            border-left: 2px solid var(--accent-color);
-        }
-
-    </style>
+  @media (max-width:860px){
+    h1{ font-size:36px; } .compare{ grid-template-columns:1fr; } body{ padding:32px 18px; }
+  }
+</style>
 </head>
 <body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow"><span class="node"></span> Eskadra Bielika · Misja 2</div>
+    <h1>Bielik&nbsp;+&nbsp;RAG</h1>
+    <p class="subtitle">Zadaj pytanie i porównaj odpowiedź samego modelu Bielik z odpowiedzią wspartą kontekstem RAG z hotelowej bazy wiedzy w BigQuery.</p>
+  </header>
 
-    <div class="header">
-        <h1>Bielik + RAG</h1>
-        <p>Zadaj pytanie i porównaj odpowiedź samego modelu Bielik z odpowiedzią wspartą kontekstem RAG opartym o hotelową bazę wiedzy w BigQuery.</p>
+  <div class="tabs">
+    <button class="tab active" id="tab-rag-btn">RAG</button>
+    <button class="tab" id="tab-arch-btn">Architektura</button>
+  </div>
+
+  <!-- RAG TAB -->
+  <section id="tab-rag">
+    <div class="ask-row">
+      <input type="text" id="promptInput" placeholder="Np. Ile kosztuje parking hotelowy?" autocomplete="off" autofocus />
+      <button class="primary" id="submitBtn">Zapytaj</button>
+    </div>
+    <div class="meta-row">
+      <div class="slider-group">
+        <label for="limitSlider">Dokumenty kontekstowe</label>
+        <input type="range" id="limitSlider" min="1" max="5" value="3" />
+        <span class="limit-val" id="limitValue">3</span>
+      </div>
+      <div class="count-badge">Reguł w bazie: <b id="countValue">…</b></div>
     </div>
 
-    <div class="input-section">
-        <input type="text" id="promptInput" placeholder="Np. Ile kosztuje parking hotelowy?" autocomplete="off" autofocus>
-        <button id="submitBtn">Zapytaj</button>
+    <div class="compare">
+      <div class="panel">
+        <h2>Bielik</h2>
+        <div class="tag">baseline · bez RAG</div>
+        <div id="directContent" class="content"><i>Czekam na Twoje pytanie…</i></div>
+      </div>
+      <div class="panel rag">
+        <h2>Bielik + RAG</h2>
+        <div class="tag">z kontekstem · BigQuery Vector Search</div>
+        <div id="ragContent" class="content"><i>Czekam na Twoje pytanie…</i></div>
+        <div id="ragContext" class="context-box" style="display:none;"></div>
+      </div>
     </div>
 
-    <div class="comparision-container">
-        <div class="panel">
-            <h2>Bielik</h2>
-            <p class="desc">Odpowiedź wygenerowana wyłącznie w oparciu o wagę modelu, bez dostępu do bazy wektorowej BigQuery.</p>
-            <div id="directContent" class="content"><i>Czekam na Twoje pytanie...</i></div>
-        </div>
-
-        <div class="panel">
-            <h2>Bielik (RAG)</h2>
-            <p class="desc">Odpowiedź wygenerowana w oparciu o odszukane w locie dokumenty z BigQuery Vector Search.</p>
-            <div id="ragContent" class="content"><i>Czekam na Twoje pytanie...</i></div>
-            <div id="ragContext" class="context-box" style="display: none;"></div>
-        </div>
+    <div class="ingest">
+      <h3>Dodaj regułę do bazy</h3>
+      <p class="hint">Wpisz nową regułę — zostanie zamieniona na wektor (EmbeddingGemma) i zapisana w BigQuery. Spróbuj potem o nią zapytać po lewej.</p>
+      <div class="ingest-row">
+        <textarea id="ingestText" placeholder="Np. Doba hotelowa rozpoczyna się o 15:00, a kończy o 11:00."></textarea>
+        <button class="primary" id="ingestBtn">Dodaj</button>
+      </div>
+      <div id="ingestResult" class="ingest-result"></div>
     </div>
+  </section>
 
-    <script>
-        const submitBtn = document.getElementById('submitBtn');
-        const promptInput = document.getElementById('promptInput');
-        
-        const directContent = document.getElementById('directContent');
-        const ragContent = document.getElementById('ragContent');
-        const ragContext = document.getElementById('ragContext');
+  <!-- ARCHITECTURE TAB -->
+  <section id="tab-arch">
+    <iframe src="/static/architecture.html" title="Architektura systemu RAG"></iframe>
+  </section>
 
-        const getSkeletonHTML = () => `
-            <div class="skeleton p1"></div>
-            <div class="skeleton p2"></div>
-            <div class="skeleton p3"></div>
-        `;
+  <footer>
+    <span>eskadra-bielika · misja 2 · RAG na Google Cloud</span>
+    <span class="prosit">model Bielik · EmbeddingGemma · BigQuery</span>
+  </footer>
+</div>
 
-        async function askBielik() {
-            const query = promptInput.value.trim();
-            if(!query) return;
+<script>
+  // --- helpers ---
+  const $ = (id) => document.getElementById(id);
+  // Bezpieczne wstawianie tekstu (chroni przed XSS w treści reguł i odpowiedzi)
+  const esc = (s) => { const d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; };
+  const scoreClass = (s) => s >= 0.75 ? 'high' : s >= 0.5 ? 'mid' : 'low';
 
-            submitBtn.disabled = true;
-            promptInput.disabled = true;
+  // --- tabs ---
+  const tabRagBtn = $('tab-rag-btn'), tabArchBtn = $('tab-arch-btn');
+  const tabRag = $('tab-rag'), tabArch = $('tab-arch');
+  tabRagBtn.addEventListener('click', () => {
+    tabRag.style.display = 'block'; tabArch.style.display = 'none';
+    tabRagBtn.classList.add('active'); tabArchBtn.classList.remove('active');
+  });
+  tabArchBtn.addEventListener('click', () => {
+    tabRag.style.display = 'none'; tabArch.style.display = 'block';
+    tabArchBtn.classList.add('active'); tabRagBtn.classList.remove('active');
+  });
 
-            directContent.innerHTML = getSkeletonHTML();
-            ragContent.innerHTML = getSkeletonHTML();
-            ragContext.style.display = 'none';
-            ragContext.innerHTML = '';
+  // --- slider ---
+  const limitSlider = $('limitSlider'), limitValue = $('limitValue');
+  limitSlider.addEventListener('input', () => { limitValue.textContent = limitSlider.value; });
 
-            const callApi = async (url) => {
-                try {
-                    const response = await fetch(url, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ query: query })
-                    });
-                    
-                    if(!response.ok) throw new Error("Błąd serwera. Sprawdź logi na Google Cloud Run.");
-                    return await response.json();
-                } catch (error) {
-                    return { error: error.message };
-                }
-            };
+  // --- count ---
+  async function refreshCount(){
+    try{ const r = await fetch('/count'); const d = await r.json(); $('countValue').textContent = d.count ?? '?'; }
+    catch{ $('countValue').textContent = '?'; }
+  }
+  refreshCount();
 
-            const directPromise = callApi('/ask_direct');
-            const ragPromise = callApi('/ask');
+  // --- ask ---
+  const submitBtn = $('submitBtn'), promptInput = $('promptInput');
+  const directContent = $('directContent'), ragContent = $('ragContent'), ragContext = $('ragContext');
+  const skeleton = () => '<div class="skeleton s1"></div><div class="skeleton s2"></div><div class="skeleton s3"></div>';
 
-            // Handle Direct response
-            directPromise.then(res => {
-                if(res.error) directContent.innerHTML = `<span style="color:#ff3b30;">${res.error}</span>`;
-                else directContent.innerText = res.answer;
-            });
+  async function callApi(url, body){
+    try{
+      const r = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+      if(!r.ok){ const e = await r.json().catch(()=>({})); throw new Error(e.detail || 'Błąd serwera. Sprawdź logi w Cloud Run.'); }
+      return await r.json();
+    }catch(err){ return { error: err.message }; }
+  }
 
-            // Handle RAG response
-            ragPromise.then(res => {
-                if(res.error) {
-                    ragContent.innerHTML = `<span style="color:#ff3b30;">${res.error}</span>`;
-                } else {
-                    ragContent.innerText = res.answer;
-                    if(res.context_used && res.context_used.length > 0) {
-                        ragContext.style.display = 'block';
-                        ragContext.innerHTML = `<h4>💡 Wykorzystany kontekst z BigQuery:</h4>`;
-                        res.context_used.forEach(ctx => {
-                            ragContext.innerHTML += `<div class="context-item">${ctx}</div>`;
-                        });
-                    }
-                }
-            });
+  async function ask(){
+    const query = promptInput.value.trim();
+    if(!query) return;
+    submitBtn.disabled = true; promptInput.disabled = true;
+    directContent.innerHTML = skeleton(); ragContent.innerHTML = skeleton();
+    ragContext.style.display = 'none'; ragContext.innerHTML = '';
 
-            await Promise.allSettled([directPromise, ragPromise]);
-            submitBtn.disabled = false;
-            promptInput.disabled = false;
-            promptInput.focus();
-        }
+    const limit = parseInt(limitSlider.value, 10);
+    const directPromise = callApi('/ask_direct', { query });
+    const ragPromise = callApi('/ask', { query, limit });
 
-        submitBtn.addEventListener('click', askBielik);
-        promptInput.addEventListener('keypress', (e) => {
-            if(e.key === 'Enter') askBielik();
+    directPromise.then(res => {
+      directContent.innerHTML = res.error ? `<span class="err">${esc(res.error)}</span>` : esc(res.answer);
+    });
+
+    ragPromise.then(res => {
+      if(res.error){ ragContent.innerHTML = `<span class="err">${esc(res.error)}</span>`; return; }
+      ragContent.innerHTML = esc(res.answer);
+      const ctx = res.context_used || [], scores = res.context_scores || [];
+      if(ctx.length){
+        ragContext.style.display = 'block';
+        let html = '<h4>Wykorzystany kontekst z BigQuery</h4>';
+        ctx.forEach((c, i) => {
+          const s = scores[i];
+          const badge = (typeof s === 'number')
+            ? `<span class="score ${scoreClass(s)}">${Math.round(s*100)}%</span>` : '';
+          html += `<div class="context-item"><span class="txt">${esc(c)}</span>${badge}</div>`;
         });
-    </script>
+        ragContext.innerHTML = html;
+      }
+    });
+
+    await Promise.allSettled([directPromise, ragPromise]);
+    submitBtn.disabled = false; promptInput.disabled = false; promptInput.focus();
+  }
+  submitBtn.addEventListener('click', ask);
+  promptInput.addEventListener('keypress', e => { if(e.key === 'Enter') ask(); });
+
+  // --- ingest ---
+  const ingestBtn = $('ingestBtn'), ingestText = $('ingestText'), ingestResult = $('ingestResult');
+  ingestBtn.addEventListener('click', async () => {
+    const text = ingestText.value.trim();
+    if(!text) return;
+    ingestBtn.disabled = true;
+    ingestResult.className = 'ingest-result'; ingestResult.textContent = 'Dodaję…';
+    const res = await callApi('/ingest_text', { text });
+    if(res.error){ ingestResult.className = 'ingest-result bad'; ingestResult.textContent = '✗ ' + res.error; }
+    else{ ingestResult.className = 'ingest-result ok'; ingestResult.textContent = '✓ Dodano regułę (id: ' + res.id + ')'; ingestText.value = ''; refreshCount(); }
+    ingestBtn.disabled = false;
+  });
+</script>
 </body>
 </html>

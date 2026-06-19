@@ -1,6 +1,7 @@
 import os
 import csv
 import io
+import uuid
 import requests
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.staticfiles import StaticFiles
@@ -10,7 +11,19 @@ import google.auth.transport.requests
 import google.oauth2.id_token
 from google.cloud import bigquery
 
-app = FastAPI(title="RAG API (Bielik & EmbeddingGemma)")
+app = FastAPI(
+    title="RAG API (Bielik & EmbeddingGemma)",
+    description=(
+        "API systemu RAG opartego o model **Bielik** (LLM) i **EmbeddingGemma** "
+        "(embeddingi) z wektorową bazą **BigQuery**.\n\n"
+        "- **/ask** — pytanie wsparte kontekstem RAG\n"
+        "- **/ask_direct** — to samo pytanie wprost do modelu (baseline, bez RAG)\n"
+        "- **/ingest**, **/ingest_text** — zasilanie bazy wiedzy\n"
+        "- **/records**, **/count** — podgląd zawartości bazy\n\n"
+        "Interaktywna dokumentacja: `/docs` (Swagger) oraz `/redoc`."
+    ),
+    version="1.0.0",
+)
 
 # Zapewnij, że katalog static istnieje
 os.makedirs("static", exist_ok=True)
@@ -56,13 +69,18 @@ def get_embedding(text: str) -> list[float]:
         "model": "embeddinggemma",
         "input": text
     }
-    response = requests.post(url, json=payload, headers=headers)
+    # timeout=30: embedding jest szybki, ale pierwszy request po wdrożeniu = zimny start Cloud Run
+    response = requests.post(url, json=payload, headers=headers, timeout=30)
     response.raise_for_status()
     # Zakładamy odpowiedź z modelem `embed` z Ollama
     return response.json().get("embeddings", [[]])[0]
 
 class AskRequest(BaseModel):
     query: str
+    limit: int = 3  # liczba dokumentów kontekstowych (sterowane suwakiem w UI, 1-5)
+
+class IngestTextRequest(BaseModel):
+    text: str
 
 @app.post("/ingest")
 async def ingest_csv(file: UploadFile = File(...)):
@@ -105,14 +123,15 @@ async def ask_question(request_data: AskRequest):
         raise HTTPException(status_code=500, detail="BigQuery client not initialized (missing PROJECT_ID)")
         
     query = request_data.query
-    
+    top_k = max(1, min(request_data.limit, 5))  # ogranicz do bezpiecznego zakresu 1-5
+
     try:
         query_embedding = get_embedding(query)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Błąd generowania wektora zapytania: {e}")
-        
+
     table_ref = f"{PROJECT_ID}.{DATASET_ID}.{TABLE_ID}"
-    
+
     # Krok 1: Wyszukiwanie Wektorowe w BigQuery
     bq_query = f"""
     SELECT base.content, distance
@@ -120,14 +139,19 @@ async def ask_question(request_data: AskRequest):
       TABLE `{table_ref}`,
       'embedding',
       (SELECT {query_embedding} as embedding),
-      top_k => 3,
+      top_k => {top_k},
       distance_type => 'COSINE'
     )
     """
     try:
         query_job = bq_client.query(bq_query)
         results = query_job.result()
-        context_docs = [row.content for row in results]
+        context_docs = []
+        context_scores = []
+        for row in results:
+            context_docs.append(row.content)
+            # COSINE distance (0-2) -> podobieństwo (0-1); im wyżej tym trafniej
+            context_scores.append(round(max(0.0, 1.0 - row.distance), 4))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Błąd przeszukiwania wektorowego w BigQuery: {e}")
         
@@ -157,7 +181,8 @@ async def ask_question(request_data: AskRequest):
     }
     
     try:
-        response = requests.post(url, json=payload, headers=headers)
+        # timeout=120: generowanie LLM bywa wolne, a pierwszy request po wdrożeniu to zimny start Cloud Run
+        response = requests.post(url, json=payload, headers=headers, timeout=120)
         response.raise_for_status()
         answer = response.json().get("message", {}).get("content", "")
     except Exception as e:
@@ -165,7 +190,8 @@ async def ask_question(request_data: AskRequest):
         
     return {
         "answer": answer,
-        "context_used": context_docs
+        "context_used": context_docs,
+        "context_scores": context_scores
     }
 
 @app.post("/ask_direct")
@@ -191,7 +217,8 @@ async def ask_direct(request_data: AskRequest):
     }
     
     try:
-        response = requests.post(url, json=payload, headers=headers)
+        # timeout=120: generowanie LLM bywa wolne, a pierwszy request po wdrożeniu to zimny start Cloud Run
+        response = requests.post(url, json=payload, headers=headers, timeout=120)
         response.raise_for_status()
         answer = response.json().get("message", {}).get("content", "")
     except Exception as e:
@@ -200,3 +227,60 @@ async def ask_direct(request_data: AskRequest):
     return {
         "answer": answer
     }
+
+
+@app.get("/health", tags=["Status"], summary="Stan usługi")
+def health():
+    """Prosty health-check — zwraca status i czy klient BigQuery jest gotowy."""
+    return {"status": "ok", "bigquery": bool(bq_client)}
+
+
+@app.get("/count", tags=["Baza wiedzy"], summary="Liczba reguł w bazie")
+def count_records():
+    """Zwraca liczbę dokumentów (reguł) w tabeli BigQuery — używane przez licznik w UI."""
+    if not bq_client:
+        return {"count": 0}
+    try:
+        table_ref = f"{PROJECT_ID}.{DATASET_ID}.{TABLE_ID}"
+        result = list(bq_client.query(f"SELECT COUNT(*) AS cnt FROM `{table_ref}`").result())
+        return {"count": result[0].cnt if result else 0}
+    except Exception:
+        return {"count": 0}
+
+
+@app.get("/records", tags=["Baza wiedzy"], summary="Podgląd reguł w bazie")
+def list_records(limit: int = 100):
+    """Zwraca dokumenty z bazy (id + treść, bez wektora) — wygodny podgląd bez SQL."""
+    if not bq_client:
+        raise HTTPException(status_code=500, detail="BigQuery client not initialized")
+    table_ref = f"{PROJECT_ID}.{DATASET_ID}.{TABLE_ID}"
+    safe_limit = max(1, min(limit, 1000))
+    try:
+        rows = list(bq_client.query(
+            f"SELECT id, content FROM `{table_ref}` LIMIT {safe_limit}"
+        ).result())
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Błąd pobierania rekordów: {e}")
+    return {"total": len(rows), "records": [{"id": r.id, "content": r.content} for r in rows]}
+
+
+@app.post("/ingest_text", tags=["Baza wiedzy"], summary="Dodaj pojedynczą regułę")
+async def ingest_text(data: IngestTextRequest):
+    """Dodaje jedną regułę do bazy na żywo: generuje embedding i wstawia do BigQuery."""
+    if not bq_client:
+        raise HTTPException(status_code=500, detail="BigQuery client not initialized")
+    text = data.text.strip()
+    if not text:
+        raise HTTPException(status_code=400, detail="Tekst nie może być pusty")
+    try:
+        embedding = get_embedding(text)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Błąd generowania wektora: {e}")
+    table_ref = f"{PROJECT_ID}.{DATASET_ID}.{TABLE_ID}"
+    row_id = str(uuid.uuid4())
+    errors = bq_client.insert_rows_json(
+        table_ref, [{"id": row_id, "content": text, "embedding": embedding}]
+    )
+    if errors:
+        raise HTTPException(status_code=500, detail=f"Błąd wstawiania do BigQuery: {errors}")
+    return {"status": "success", "id": row_id, "text": text}

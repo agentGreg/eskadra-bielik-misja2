@@ -1,0 +1,3 @@
+# Artefakty checkpointów i certyfikaty — lokalne, nie commitować
+*.enc
+certyfikat.txt
