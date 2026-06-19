@@ -85,10 +85,13 @@ _publish_progress() {
 
 # Zapis lokalnego, zaszyfrowanego artefaktu (dowód ukończenia kroku) + publikacja postępu.
 _save_artifact() {
-  local num="$1" content="$2" project_id account key
+  local num="$1" content="$2" project_id account key hashtool
   project_id=$(gcloud config get-value project 2>/dev/null | tr -d '[:space:]')
   account=$(gcloud config get-value account 2>/dev/null | tr -d '[:space:]')
-  key=$(echo -n "${_HEADER_TEXT}|${project_id}|${account}" | shasum -a 512 | awk '{print $1}')
+  # Przenośny SHA-512: sha512sum (Linux/Cloud Shell) lub shasum -a 512 (macOS) — ten sam wynik
+  hashtool="shasum -a 512"
+  command -v sha512sum >/dev/null 2>&1 && hashtool="sha512sum"
+  key=$(echo -n "${_HEADER_TEXT}|${project_id}|${account}" | $hashtool | awk '{print $1}')
   mkdir -p "$_CERT_DIR"
   local enc
   enc=$(echo "$content" | openssl enc -aes-256-cbc -pbkdf2 -iter 100000 -pass "pass:${key}" -base64 2>/dev/null)

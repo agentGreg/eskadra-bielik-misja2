@@ -107,6 +107,20 @@ Przykładowy kod źródłowy zawarty w tym repozytorium pozwala w szczególnośc
    cloudshell workspace .
    ```
 
+10. **Uzupełnij swoje dane warsztatowe** — otwórz `setup_env.sh` w edytorze i wypełnij 4 linie w sekcji „UZUPEŁNIJ SWOJE DANE":
+    ```bash
+    export WORKSHOP_NICK="TwojNick"            # nick na TABLICĘ na rzutniku (publiczny)
+    export WORKSHOP_FIRST_NAME="Imię"          # do certyfikatu (NIE trafia na tablicę)
+    export WORKSHOP_LAST_NAME="Nazwisko"
+    export WORKSHOP_EMAIL="email@przyklad.pl"
+    ```
+    > Nick jest widoczny publicznie na tablicy wyników. Imię, nazwisko i email służą wyłącznie do oficjalnego certyfikatu (wystawia organizator — Bielik AI) i nie pojawiają się na tablicy.
+
+11. Wczytaj zmienne (dzięki temu Twój nick pojawi się na tablicy już od pierwszego checkpointu):
+    ```bash
+    source setup_env.sh
+    ```
+
 **✅ Zalicz krok — +5 pkt.** Sprawdź, że projekt jest gotowy, i wyślij postęp na tablicę:
 ```bash
 ./checkpoints/checkpoint_1.sh
@@ -131,33 +145,24 @@ Przykładowy kod źródłowy zawarty w tym repozytorium pozwala w szczególnośc
 
 1. Przeanalizuj skrypt `setup_env.sh`
 
-2. **Uzupełnij swoje dane** — otwórz `setup_env.sh` w edytorze i wypełnij 4 linie w sekcji „UZUPEŁNIJ SWOJE DANE":
-   ```bash
-   export WORKSHOP_NICK="TwojNick"            # nick na TABLICĘ na rzutniku (publiczny)
-   export WORKSHOP_FIRST_NAME="Imię"          # do certyfikatu (NIE trafia na tablicę)
-   export WORKSHOP_LAST_NAME="Nazwisko"
-   export WORKSHOP_EMAIL="email@przyklad.pl"
-   ```
-   > Nick jest widoczny publicznie na tablicy wyników. Imię, nazwisko i email służą wyłącznie do oficjalnego certyfikatu (wystawia organizator — Bielik AI) i nie pojawiają się na tablicy.
+2. Dane warsztatowe (nick, imię, nazwisko, email) uzupełniłeś już w kroku 1. Jeśli jeszcze nie — otwórz teraz `setup_env.sh` i wypełnij sekcję „UZUPEŁNIJ SWOJE DANE".
 
-3. Otwórz ponownie terminal Cloud Shell
-
-4. Uruchom skrypt `setup_env.sh`
+3. Uruchom skrypt `setup_env.sh` (po każdym otwarciu nowego terminala):
    ```bash
    source setup_env.sh
    ```
-   Po uruchomieniu zobaczysz potwierdzenie z Twoim nickiem i imieniem. Jeśli pojawi się ostrzeżenie „nie ustawiłeś swoich danych" — wróć do punktu 2.
+   Po uruchomieniu zobaczysz potwierdzenie z Twoim nickiem i imieniem. Jeśli pojawi się ostrzeżenie „nie ustawiłeś swoich danych" — uzupełnij je w `setup_env.sh`.
 >[!IMPORTANT]
 >Jeżeli z jakiegoś powodu musisz ponownie uruchomić terminal Cloud Shell, pamiętaj aby ponownie uruchomić skrypt `setup_env.sh` aby wczytać zmienne środowiskowe.
 
-5. Włącz potrzebne usługi w projekcie Google Cloud
+4. Włącz potrzebne usługi w projekcie Google Cloud
    ```bash
    gcloud services enable run.googleapis.com
    gcloud services enable cloudbuild.googleapis.com
    gcloud services enable artifactregistry.googleapis.com
    gcloud services enable bigquery.googleapis.com
    ```
-6. Uzyskaj uprawnienia do wywoływania usług Cloud Run
+5. Uzyskaj uprawnienia do wywoływania usług Cloud Run
    ```bash
    gcloud projects add-iam-policy-binding $PROJECT_ID \
     --member=user:$(gcloud config get-value account) \
@@ -387,7 +392,7 @@ Projekt wykorzystuje BigQuery z funkcją Vector Search jako bazę z wiedzą kont
 <details><summary>Przykładowe wyjście</summary>
 
 ```text
-  [OK]  Baza zasilona (38 reguł)
+  [OK]  Baza zasilona (19 reguł)
   [OK]  RAG /ask zwraca odpowiedź z kontekstem
 ======================================================
   CHECKPOINT 7 ZALICZONY — Zasilanie i wyszukiwanie RAG
