@@ -63,7 +63,24 @@ Przykładowy kod źródłowy zawarty w tym repozytorium pozwala w szczególnośc
 >
 > Jeśli komenda „nie działa", najpierw sprawdź czy uruchomiłeś `source setup_env.sh` w bieżącym terminalu.
 
-## 1. Przygotowanie projektu Google Cloud
+## Agenda warsztatu
+
+| # | Etap | Czas | Punkty |
+|---|------|------|--------|
+| 1 | Projekt GCP, dane i zmienne środowiskowe | ~15 min | +5 |
+| 2 | Usługi i uprawnienia Google Cloud | ~10 min | +10 |
+| 3 | Model Bielik (LLM) na Cloud Run | ~15 min | +15 |
+| 4 | Model EmbeddingGemma na Cloud Run | ~10 min | +10 |
+| 5 | Wektorowa baza BigQuery | ~5 min | +10 |
+| 6 | API Orchestration na Cloud Run | ~10 min | +15 |
+| 7 | Zasilanie i wyszukiwanie RAG | ~10 min | +15 |
+| 8 | Przegląd API (`/docs`) | ~5 min | +5 |
+| 9 | Interfejs Web UI | ~5 min | +15 |
+| ★ | Certyfikat | ~5 min | 100/100 |
+
+Łącznie **~90 min** i **100 pkt**. Po każdym etapie uruchamiasz checkpoint (blok „✅ Zalicz krok"), który sprawdza poprawność i melduje Twój postęp na tablicę wyników na rzutniku.
+
+## 1. Przygotowanie projektu Google Cloud i konfiguracja zmiennych środowiskowych
 
 1. Uzyskaj kredyt Cloud **OnRamp**, lub skonfiguruj płatności w projekcie Google Cloud
 
@@ -107,7 +124,8 @@ Przykładowy kod źródłowy zawarty w tym repozytorium pozwala w szczególnośc
    cloudshell workspace .
    ```
 
-10. **Uzupełnij swoje dane warsztatowe** — otwórz `setup_env.sh` w edytorze i wypełnij 4 linie w sekcji „UZUPEŁNIJ SWOJE DANE":
+10. Otwórz `setup_env.sh` w edytorze i przeanalizuj go.
+11. **Uzupełnij swoje dane warsztatowe** w `setup_env.sh` - wypełnij 4 linie w sekcji „UZUPEŁNIJ SWOJE DANE":
     ```bash
     export WORKSHOP_NICK="TwojNick"            # nick na TABLICĘ na rzutniku (publiczny)
     export WORKSHOP_FIRST_NAME="Imię"          # do certyfikatu (NIE trafia na tablicę)
@@ -116,10 +134,13 @@ Przykładowy kod źródłowy zawarty w tym repozytorium pozwala w szczególnośc
     ```
     > Nick jest widoczny publicznie na tablicy wyników. Imię, nazwisko i email służą wyłącznie do oficjalnego certyfikatu (wystawia organizator — Bielik AI) i nie pojawiają się na tablicy.
 
-11. Wczytaj zmienne (dzięki temu Twój nick pojawi się na tablicy już od pierwszego checkpointu):
-    ```bash
-    source setup_env.sh
-    ```
+12. Uruchom skrypt `setup_env.sh` (po każdym otwarciu nowego terminala):
+   ```bash
+   source setup_env.sh
+   ```
+   Po uruchomieniu zobaczysz potwierdzenie z Twoim nickiem i imieniem. Jeśli pojawi się ostrzeżenie „nie ustawiłeś swoich danych" — uzupełnij je w `setup_env.sh`.
+>[!IMPORTANT]
+>Jeżeli z jakiegoś powodu musisz ponownie uruchomić terminal Cloud Shell, pamiętaj aby ponownie uruchomić skrypt `setup_env.sh` aby wczytać zmienne środowiskowe.
 
 **✅ Zalicz krok — +5 pkt.** Sprawdź, że projekt jest gotowy, i wyślij postęp na tablicę:
 ```bash
@@ -134,6 +155,8 @@ Przykładowy kod źródłowy zawarty w tym repozytorium pozwala w szczególnośc
 ======================================================
   CHECKPOINT 1 ZALICZONY — Projekt Google Cloud
   Punkty: +5  (łącznie 5 / 100)
+  Postęp: [#.............................] 5%
+  Projekt gotowy. Infrastruktura czeka na uruchomienie!
   Dashboard: wysłano (nick: TwojNick)
   Certyfikat: dane zarejestrowane u prowadzącego
   Artefakt: cert_artifacts/checkpoint_1.enc
@@ -143,26 +166,14 @@ Przykładowy kod źródłowy zawarty w tym repozytorium pozwala w szczególnośc
 
 ## 2. Konfiguracja zmiennych środowiskowych i usług Google Cloud
 
-1. Przeanalizuj skrypt `setup_env.sh`
-
-2. Dane warsztatowe (nick, imię, nazwisko, email) uzupełniłeś już w kroku 1. Jeśli jeszcze nie — otwórz teraz `setup_env.sh` i wypełnij sekcję „UZUPEŁNIJ SWOJE DANE".
-
-3. Uruchom skrypt `setup_env.sh` (po każdym otwarciu nowego terminala):
-   ```bash
-   source setup_env.sh
-   ```
-   Po uruchomieniu zobaczysz potwierdzenie z Twoim nickiem i imieniem. Jeśli pojawi się ostrzeżenie „nie ustawiłeś swoich danych" — uzupełnij je w `setup_env.sh`.
->[!IMPORTANT]
->Jeżeli z jakiegoś powodu musisz ponownie uruchomić terminal Cloud Shell, pamiętaj aby ponownie uruchomić skrypt `setup_env.sh` aby wczytać zmienne środowiskowe.
-
-4. Włącz potrzebne usługi w projekcie Google Cloud
+1. Włącz potrzebne usługi w projekcie Google Cloud
    ```bash
    gcloud services enable run.googleapis.com
    gcloud services enable cloudbuild.googleapis.com
    gcloud services enable artifactregistry.googleapis.com
    gcloud services enable bigquery.googleapis.com
    ```
-5. Uzyskaj uprawnienia do wywoływania usług Cloud Run
+2. Uzyskaj uprawnienia do wywoływania usług Cloud Run
    ```bash
    gcloud projects add-iam-policy-binding $PROJECT_ID \
     --member=user:$(gcloud config get-value account) \
@@ -185,6 +196,8 @@ Przykładowy kod źródłowy zawarty w tym repozytorium pozwala w szczególnośc
 ======================================================
   CHECKPOINT 2 ZALICZONY — Konfiguracja env i usług
   Punkty: +10  (łącznie 15 / 100)
+  Postęp: [####..........................] 15%
+  Usługi włączone, uprawnienia ustawione. Czas na modele!
   Dashboard: wysłano (nick: TwojNick)
   Artefakt: cert_artifacts/checkpoint_2.enc
 ======================================================
@@ -223,6 +236,8 @@ Przykładowy kod źródłowy zawarty w tym repozytorium pozwala w szczególnośc
 ======================================================
   CHECKPOINT 3 ZALICZONY — Model Bielik (Cloud Run)
   Punkty: +15  (łącznie 30 / 100)
+  Postęp: [#########.....................] 30%
+  Bielik mówi po polsku w chmurze. Najtrudniejszy krok za Tobą!
   Dashboard: wysłano (nick: TwojNick)
   Artefakt: cert_artifacts/checkpoint_3.enc
 ======================================================
@@ -261,6 +276,8 @@ Przykładowy kod źródłowy zawarty w tym repozytorium pozwala w szczególnośc
 ======================================================
   CHECKPOINT 4 ZALICZONY — Model EmbeddingGemma (Cloud Run)
   Punkty: +10  (łącznie 40 / 100)
+  Postęp: [############..................] 40%
+  Embedding działa — tekst zamienia się w wektory. Czas na bazę!
   Dashboard: wysłano (nick: TwojNick)
   Artefakt: cert_artifacts/checkpoint_4.enc
 ======================================================
@@ -303,6 +320,8 @@ Projekt wykorzystuje BigQuery z funkcją Vector Search jako bazę z wiedzą kont
 ======================================================
   CHECKPOINT 5 ZALICZONY — Wektorowa baza BigQuery
   Punkty: +10  (łącznie 50 / 100)
+  Postęp: [###############...............] 50%
+  Baza wektorowa gotowa. Spinamy wszystko w jedno API!
   Dashboard: wysłano (nick: TwojNick)
   Artefakt: cert_artifacts/checkpoint_5.enc
 ======================================================
@@ -345,6 +364,8 @@ Projekt wykorzystuje BigQuery z funkcją Vector Search jako bazę z wiedzą kont
 ======================================================
   CHECKPOINT 6 ZALICZONY — API Orchestration (Cloud Run)
   Punkty: +15  (łącznie 65 / 100)
+  Postęp: [###################...........] 65%
+  API orkiestrujące żyje. Zostało zasilić bazę i pytać!
   Dashboard: wysłano (nick: TwojNick)
   Artefakt: cert_artifacts/checkpoint_6.enc
 ======================================================
@@ -397,6 +418,8 @@ Projekt wykorzystuje BigQuery z funkcją Vector Search jako bazę z wiedzą kont
 ======================================================
   CHECKPOINT 7 ZALICZONY — Zasilanie i wyszukiwanie RAG
   Punkty: +15  (łącznie 80 / 100)
+  Postęp: [########################......] 80%
+  RAG w akcji — wyszukiwanie semantyczne działa! Już prawie meta.
   Dashboard: wysłano (nick: TwojNick)
   Artefakt: cert_artifacts/checkpoint_7.enc
 ======================================================
@@ -435,6 +458,8 @@ echo "$ORCHESTRATION_URL/docs"
 ======================================================
   CHECKPOINT 8 ZALICZONY — Przegląd API (/docs)
   Punkty: +5  (łącznie 85 / 100)
+  Postęp: [#########################.....] 85%
+  Dokumentacja przejrzana. Ostatni krok przed Tobą!
   Dashboard: wysłano (nick: TwojNick)
   Artefakt: cert_artifacts/checkpoint_8.enc
 ======================================================
@@ -474,6 +499,8 @@ Aby otworzyć interfejs graficzny testowej aplikacji z poziomu Twojego projektu:
 ======================================================
   CHECKPOINT 9 ZALICZONY — Interfejs Web UI
   Punkty: +15  (łącznie 100 / 100)
+  Postęp: [##############################] 100%
+  WARSZTAT UKOŃCZONY! Wygeneruj certyfikat i pochwal się wynikiem!
   Dashboard: wysłano (nick: TwojNick)
   Artefakt: cert_artifacts/checkpoint_9.enc
 ======================================================
@@ -528,6 +555,10 @@ Twój postęp pojawia się na **tablicy wyników na rzutniku** — pod Twoim **n
   ```
   Skrypt użyje danych z `setup_env.sh` i utworzy lokalny certyfikat. Oficjalny certyfikat wyśle organizator (Bielik AI).
 
+> [!TIP]
+> 📱 **Włącz kamerę w telefonie, zanim uruchomisz `certyfikat_generate.sh`!**
+> Generowanie odpala wielki napis **GRATULACJE**, pasek 100% i podsumowanie wszystkich 9 kroków — to moment, który warto mieć na pamiątkę z warsztatu. A potem spójrz na **tablicę wyników na rzutniku** — jest tam Twój nick. Uda się na podium? 🦅
+
 > [!NOTE]
 > Modele Bielik i EmbeddingGemma wdrażają się domyślnie z **gotowego, publicznego obrazu** (szybki start, bez budowania). Chcesz zbudować własny obraz ze źródła? Ustaw `export BUILD_FROM_SOURCE=1` przed `./cloud_run.sh`.
 
@@ -548,6 +579,32 @@ Twój postęp pojawia się na **tablicy wyników na rzutniku** — pod Twoim **n
 
 > [!WARNING]
 > Prompty z `@plik` służą **analizie kodu**, nie uruchamianiu. Każdy zawiera końcową dyrektywę „nie uruchamiaj" — **nie usuwaj jej**, bo Gemini bywa nadgorliwy i potrafi sam wykonać skrypt.
+
+### 🎨 Eksperyment — zmień wygląd interfejsu
+
+Zbudowany system to dopiero początek — każdy fragment możesz zmienić. Najłatwiej zacząć od kolorów Web UI.
+
+**Wariant A — ręcznie (CSS).** Web UI trzyma kolory w zmiennych CSS na górze `orchestration/static/index.html` (sekcja `:root`).
+1. Odblokuj plik do edycji (na warsztacie bywa tylko do odczytu):
+   ```bash
+   chmod +w orchestration/static/index.html
+   ```
+2. W sekcji `:root` podmień kolor akcentu, np. `--bielik-teal:#1B5E6B;` → `--bielik-teal:#7C3AED;` (fiolet).
+3. Wdróż ponownie i odśwież stronę:
+   ```bash
+   cd orchestration && ./cloud_run.sh && cd ..
+   ```
+
+**Wariant B — Gemini CLI.** Niech AI przerobi motyw za Ciebie:
+```bash
+chmod +w orchestration/static/index.html
+gemini "Zmodyfikuj plik @orchestration/static/index.html: zmień motyw na ciemny (dark mode) z akcentem fioletowym. Zachowaj całą funkcjonalność i strukturę HTML. Nie uruchamiaj pliku."
+```
+Inny pomysł — retro terminal:
+```bash
+gemini "Zmodyfikuj @orchestration/static/index.html nadając wygląd retro-terminala: zielony tekst na czarnym tle, czcionka monospace. Zachowaj funkcjonalność. Nie uruchamiaj pliku."
+```
+Po zmianie wdróż ponownie (`cd orchestration && ./cloud_run.sh && cd ..`), odśwież stronę i pochwal się swoją wersją innym uczestnikom!
 
 **Krok 2 — zmienne i usługi**
 ```bash
@@ -577,6 +634,22 @@ gemini "Prześledź krok po kroku, co dzieje się w endpoincie /ask: od wektora 
 
 > [!TIP]
 > Zadaj też **własne** pytania, np. *„Jak zmodyfikować @orchestration/main.py, żeby /ask zwracał czas każdego etapu (embedding, BigQuery, Bielik)?"* lub *„Jak dodać dzielenie długich dokumentów na fragmenty (chunking) przed indeksowaniem?"*. To naturalne przejście od *zrozumienia* do *modyfikacji*.
+
+## 15. Co dalej? — rozwijaj swój system RAG
+
+Warsztat to punkt startowy. Sześć kierunków, w które możesz pójść dalej:
+
+| Kierunek | Co zrobić |
+|----------|-----------|
+| **Własne dane** | Podmień `vector_store/hotel_rules.csv` na własne dokumenty (kolumny `id`, `text`) i zasil bazę przez `/ingest`. |
+| **Chunking** | Dziel długie dokumenty na krótsze fragmenty przed osadzeniem — trafniejszy kontekst. |
+| **Lepszy prompt** | Eksperymentuj z instrukcją systemową w `orchestration/main.py` (ton, język, format odpowiedzi). |
+| **Ewaluacja** | Zmierz jakość RAG (trafność kontekstu, halucynacje) na zestawie pytań testowych. |
+| **Streaming** | Włącz `stream: true` w wywołaniu Bielika, by odpowiedź pojawiała się token po tokenie. |
+| **Produkcja** | Dodaj autoryzację endpointów, monitoring i limity kosztów; rozważ większą wersję Bielika. |
+
+> [!TIP]
+> Chcesz zobaczyć „jak to działa" wizualnie — embedding, wyszukiwanie podobieństwa i RAG krok po kroku, z interaktywnym playgroundem? Wejdź na **tablicę prowadzącego → zakładka „Architektura / prezentacja"** (`/architektura`).
 
 
 

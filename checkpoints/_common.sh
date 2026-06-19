@@ -22,6 +22,77 @@ _STEP_LABELS=(
 )
 _STEP_POINTS=(0 5 10 15 10 10 15 15 5 15)   # suma = 100
 
+# Komunikaty motywacyjne po zaliczeniu kroku
+_STEP_MSG=(
+  ""
+  "Projekt gotowy. Infrastruktura czeka na uruchomienie!"
+  "Usługi włączone, uprawnienia ustawione. Czas na modele!"
+  "Bielik mówi po polsku w chmurze. Najtrudniejszy krok za Tobą!"
+  "Embedding działa — tekst zamienia się w wektory. Czas na bazę!"
+  "Baza wektorowa gotowa. Spinamy wszystko w jedno API!"
+  "API orkiestrujące żyje. Zostało zasilić bazę i pytać!"
+  "RAG w akcji — wyszukiwanie semantyczne działa! Już prawie meta."
+  "Dokumentacja przejrzana. Ostatni krok przed Tobą!"
+  "WARSZTAT UKOŃCZONY! Wygeneruj certyfikat i pochwal się wynikiem!"
+)
+
+# Pasek postępu ASCII na podstawie zdobytych punktów (z 100)
+_draw_bar() {
+  local earned="$1" width=30 filled i bar=""
+  filled=$(( earned * width / 100 ))
+  for ((i=0; i<filled; i++)); do bar="${bar}#"; done
+  for ((i=filled; i<width; i++)); do bar="${bar}."; done
+  printf "[%s] %d%%" "$bar" "$earned"
+}
+
+# --- Bielik (orzeł) machający skrzydłami — animacja ASCII na certyfikat ---
+# Każda klatka ma DOKŁADNIE 6 linii (potrzebne do przewijania kursora).
+_EAGLE_H=6
+_EAGLE_UP=(
+'       \                          /'
+'        \__                    __/'
+'           \__      /\      __/'
+'              \__ (o  o) __/'
+'                 \  vv  /'
+'                  \____/'
+)
+_EAGLE_DOWN=(
+'                 (o  o)'
+'              __/  vv  \__'
+'           __/   \__/    \__'
+'        __/                 \__'
+'       /                       \'
+'      /                         \'
+)
+_EAGLE_MID=(
+'      \__                      __/'
+'         \___     ____     ___/'
+'             \__ (o  o) __/'
+'                \  vv  /'
+'                 \_||_/'
+'                   ""'
+)
+
+# Wypisuje klatkę, czyszcząc każdą linię (bez ghostingu przy animacji)
+_print_frame() {
+  local line
+  for line in "$@"; do printf '\033[2K%s\n' "$line"; done
+}
+
+# Animacja: kilka machnięć skrzydłami, na końcu ląduje na rozpostartych skrzydłach.
+_anim_eagle() {
+  if [ ! -t 1 ]; then _print_frame "${_EAGLE_MID[@]}"; return; fi
+  printf '%b' "$C_TEAL"
+  local i
+  for ((i=0; i<6; i++)); do
+    if (( i % 2 == 0 )); then _print_frame "${_EAGLE_UP[@]}"; else _print_frame "${_EAGLE_DOWN[@]}"; fi
+    sleep 0.18
+    printf '\033[%dA' "$_EAGLE_H"
+  done
+  _print_frame "${_EAGLE_MID[@]}"
+  printf '%b' "$C_RESET"
+}
+
 _print_sep()  { echo "======================================================"; }
 _print_ok()   { echo "  [OK]  $1"; }
 _print_fail() { echo "  [!!]  $1"; }
@@ -119,6 +190,8 @@ _finish() {
   local earned; earned=$(_earned_points)
   printf "  CHECKPOINT %d ZALICZONY — %s\n" "$num" "${_STEP_LABELS[$num]}"
   printf "  Punkty: +%d  (łącznie %d / 100)\n" "${_STEP_POINTS[$num]}" "$earned"
+  printf "  Postęp: %s\n" "$(_draw_bar "$earned")"
+  printf "  %s\n" "${_STEP_MSG[$num]}"
   _publish_progress "$num"
   _register_pii
   printf "  Artefakt: cert_artifacts/checkpoint_%d.enc\n" "$num"

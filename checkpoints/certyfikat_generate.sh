@@ -4,6 +4,10 @@
 # Dane osobowe trafiają wyłącznie prywatnym kanałem do prowadzącego — NIE na publiczną tablicę.
 source "$(dirname "$0")/_common.sh"
 
+# Kolory ANSI (renderują się w terminalu; w potoku po prostu znikają)
+C_RESET=$'\033[0m'; C_BOLD=$'\033[1m'
+C_CYAN=$'\033[0;36m'; C_GREEN=$'\033[0;32m'; C_YELLOW=$'\033[1;33m'; C_TEAL=$'\033[38;5;30m'
+
 _print_sep; echo " CERTYFIKAT — Eskadra Bielika Misja 2"; _print_sep
 
 # 1) Weryfikacja wszystkich checkpointów
@@ -40,7 +44,35 @@ if [ -n "$TRACKING_PROJECT" ] && [ "$TRACKING_PROJECT" != "disabled" ]; then
   fi
 fi
 
-# 4) Lokalny certyfikat
+# 4) EFEKT WIEŃCZĄCY — bielik macha skrzydłami, duży napis, podsumowanie, pasek 100%
+echo ""
+_anim_eagle
+echo ""
+printf "%b" "$C_BOLD$C_YELLOW"
+cat <<'BANNER'
+ ██████╗ ██████╗  █████╗ ████████╗██╗   ██╗██╗      █████╗  ██████╗     ██╗███████╗
+██╔════╝ ██╔══██╗██╔══██╗╚══██╔══╝██║   ██║██║     ██╔══██╗██╔════╝     ██║██╔════╝
+██║  ███╗██████╔╝███████║   ██║   ██║   ██║██║     ███████║██║          ██║█████╗
+██║   ██║██╔══██╗██╔══██║   ██║   ██║   ██║██║     ██╔══██║██║     ██   ██║██╔══╝
+╚██████╔╝██║  ██║██║  ██║   ██║   ╚██████╔╝███████╗██║  ██║╚██████╗╚█████╔╝███████╗
+ ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝   ╚═╝    ╚═════╝ ╚══════╝╚═╝  ╚═╝ ╚═════╝ ╚════╝ ╚══════╝
+BANNER
+printf "%b\n" "$C_RESET"
+printf "%s  WARSZTAT ESKADRA BIELIKA — MISJA 2 — UKOŃCZONY!%s\n\n" "$C_BOLD$C_CYAN" "$C_RESET"
+printf "  Uczestnik : %s %s  (nick: %s)\n" "$FIRST" "$LAST" "$NICK"
+printf "  Projekt   : %s\n" "$PROJECT_ID"
+printf "  Data      : %s\n\n" "$TS"
+printf "  %sWynik: %d / 100 pkt%s\n" "$C_BOLD$C_GREEN" "$EARNED" "$C_RESET"
+printf "  %s\n\n" "$(_draw_bar "$EARNED")"
+echo "  Zaliczone kroki:"
+for i in $(seq 1 $TOTAL_STEPS); do
+  printf "  %s[OK]%s Krok %d  +%2d pkt  %s\n" "$C_GREEN" "$C_RESET" "$i" "${_STEP_POINTS[$i]}" "${_STEP_LABELS[$i]}"
+done
+echo ""
+printf "  %sSuwerenne AI po polsku — Bielik + Google Cloud%s\n" "$C_TEAL" "$C_RESET"
+_print_sep
+
+# 5) Lokalny certyfikat (plik tekstowy do wysłania/zachowania)
 CERT="${_CERT_DIR}/certyfikat.txt"
 cat > "$CERT" <<EOF
 ============================================================
@@ -54,6 +86,6 @@ cat > "$CERT" <<EOF
 ============================================================
 EOF
 echo ""
-_print_ok "Certyfikat lokalny: cert_artifacts/certyfikat.txt"
-cat "$CERT"
+_print_ok "Certyfikat lokalny zapisany: cert_artifacts/certyfikat.txt"
+echo "  Oficjalny, podpisany certyfikat otrzymasz mailem od organizatora (Bielik AI)."
 _print_sep
